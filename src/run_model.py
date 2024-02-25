@@ -98,38 +98,9 @@ def setup_conversation(conversation, voc):
     return utterances, [], None, None
 
 
-def main():
-    # Fix random state for reproducibility
-    random.seed(2019)
-    # First, we need to build the vocabulary so that we know how to map tokens to tensor indicies.
-    # For the sake of replicating the paper results, we will load the pre-computed vocabulary objects used in the paper.
-    voc = loadPrecomputedVoc("wikiconv", WORD2INDEX_URL, INDEX2WORD_URL)
-
-    # Tell torch to use GPU. Note that if you are running this notebook in a non-GPU environment, you can change 'cuda' to 'cpu' to get the code to run.
-    device = torch.device("cuda")
-
-    predictor = load_model(voc, device)
-
+def run(conversations, predictor):
     # Run the pipeline!
-    conversation = [[
-        "What's your plan for tomorrow?",
-        "I'm not sure what your problem is...",
-        "What do you mean dude?",
-    ], [
-        "What's your plan for tomorrow?",
-        "I'm not sure what your problem is...",
-        "Oh, sorry, I didn't mean to be rude. I'm just not sure what you're asking."
-    ], [
-        "What's your plan for tomorrow?",
-        "I'm going to the beach!",
-        "That's great!"
-    ], [
-        "What's your plan for tomorrow?",
-        "I'm not sure what your problem is...",
-        "What do you mean dude?",
-        "Fuck off man."
-    ]]
-    batch_dialogs = [setup_conversation(convo, voc) for convo in conversation]
+    batch_dialogs = [setup_conversation(convo, voc) for convo in conversations]
     batch_tensors = batch2TrainData(voc, batch_dialogs, already_sorted=True)
     input_batch, dialog_lengths, utt_lengths, batch_indices, dialog_indices, labels, convo_ids, target_variable, mask, max_target_len = batch_tensors
     dialog_lengths_list = [len(x[0]) for x in batch_dialogs]
@@ -140,18 +111,14 @@ def main():
     # Predict future attack using predictor
     scores = predictor(input_batch, dialog_lengths, dialog_lengths_list, utt_lengths, batch_indices, dialog_indices, len(batch_dialogs), max_length=MAX_LENGTH)
     predictions = (scores > 0.5).float()
-    import ipdb; ipdb.set_trace()
     return predictions, scores
 
-    # run the model
-    predictions, scores = evaluateBatch(encoder, context_encoder, predictor, voc, input_variable,
-                                        dialog_lengths, dialog_lengths_list, utt_lengths, batch_indices, dialog_indices,
-                                        true_batch_size, device)
 
-    import ipdb
-
-    ipdb.set_trace()
-
-
-if __name__ == "__main__":
-    main()
+# Fix random state for reproducibility
+random.seed(2019)
+# First, we need to build the vocabulary so that we know how to map tokens to tensor indicies.
+# For the sake of replicating the paper results, we will load the pre-computed vocabulary objects used in the paper.
+voc = loadPrecomputedVoc("wikiconv", WORD2INDEX_URL, INDEX2WORD_URL)
+# Tell torch to use GPU. Note that if you are running this notebook in a non-GPU environment, you can change 'cuda' to 'cpu' to get the code to run.
+device = torch.device("cuda")
+predictor = load_model(voc, device)
