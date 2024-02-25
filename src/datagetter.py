@@ -63,7 +63,7 @@ def generate_diffuser_text(comments: list) -> str:
     :param toxic_comments: A list of strings, each a comment identified as toxic.
     :return: A string containing the AI-generated diffuser text.
     """
-    thread = "\n".join([comment in comments if "stop-tox" not in comment])  # Combine toxic comments into a single string for simplicity
+    thread = "\n".join([comment for comment in comments if "stop-tox" not in comment])  # Combine toxic comments into a single string for simplicity
     diffuser_prompt = f"With the context of this thread, generate a response that can help diffuse the situation:\n {thread} \n Put your response below."
     # Replace 'model_name' with your actual model name or ID on Replicate
     output = replicate.run(
