@@ -56,3 +56,28 @@ Contributions are welcome! Please submit a pull request or open an issue if you 
 License
 Specify your license here (e.g., MIT, GPL, etc.)
 
+
+For generating non-toxic and contextually appropriate responses, especially when aiming to mitigate conversation toxicity or detect toxic comments, setting the right parameters is crucial for balancing creativity with relevance and safety. Based on the requirements you've outlined (low temperature and max tokens around 100), here are the suggested parameters:
+
+```
+input={
+    "top_k": 40,  # Controls diversity. A lower value than 50 to slightly reduce randomness.
+    "top_p": 0.9,  # Nucleus sampling. Lowering a bit from 0.95 to make responses slightly less varied.
+    "prompt": your_prompt_here,  # Replace with your actual prompt.
+    "temperature": 0.5,  # Lower temperature for more predictable responses.
+    "max_new_tokens": 100,  # Limiting the response length as per your request.
+    "min_new_tokens": 50,  # Ensuring a minimum length to provide enough content for a meaningful response.
+    "repetition_penalty": 1.2  # Slightly higher to discourage repetitive responses.
+}
+```
+top_k: Reducing top_k from 50 to 40 makes the model's choices slightly less random, focusing more on the likely words while still allowing for some creativity. This is useful for ensuring that the generated content remains relevant and coherent.
+
+top_p (nucleus sampling): Adjusting top_p to 0.9 from 0.95 tightens the range of words considered for each choice, further concentrating on the more probable outcomes. It's a balance between generating diverse content and avoiding too much randomness, which is important for sensitive applications like mitigating toxicity.
+
+temperature: Setting the temperature to 0.5. A lower temperature makes the model's responses more deterministic and conservative, which is suitable for generating responses where accuracy and relevance are more critical than creativity, such as in diffusing toxic situations.
+
+max_new_tokens and min_new_tokens: Specifying a maximum of 100 new tokens and a minimum of 50 ensures that the responses are concise yet sufficiently detailed to convey a complete thought or argument, aligning with the goal of providing meaningful engagement without overwhelming the conversation.
+
+repetition_penalty: Increasing the repetition penalty slightly to 1.2 encourages the model to use a wider range of vocabulary and sentence structures, reducing the risk of generating monotonous or repetitive responses.
+
+These parameters are tailored to generate responses that are coherent, contextually relevant, and conservative in terms of creativity, which should be effective for applications aiming at detecting toxicity and generating diffusing responses in online conversations. Adjustments might be needed based on the specific behavior of the model you're using and the exact nature of the conversations you're dealing with.
