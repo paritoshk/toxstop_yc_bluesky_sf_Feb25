@@ -23,7 +23,7 @@ client = Client("https://bsky.social")
 firehose = FirehoseSubscribeReposClient()
 
  #can you try?
-REPLICATE_API_TOKEN = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
+# REPLICATE_API_TOKEN = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
 # Example function
 
 # Assuming REPLICATE_API_TOKEN and other necessary imports are defined elsewhere
@@ -55,7 +55,7 @@ def detect_toxic_comments(thread_info: str) -> list:
     #toxic_comments = output[0]["text"].split("\n")  # Adjust this line based on the model's output
     return output
 
-def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
+def generate_diffuser_text(comments: list) -> str:
     """
     Generate a response aimed at diffusing the toxicity identified in the thread using Replicate.
 
@@ -63,8 +63,8 @@ def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
     :param toxic_comments: A list of strings, each a comment identified as toxic.
     :return: A string containing the AI-generated diffuser text.
     """
-    toxic_summary = " ".join(toxic_comments)  # Combine toxic comments into a single string for simplicity
-    diffuser_prompt = f"With the context of this thread: {thread_info} and the following toxic comments: {toxic_summary}, generate a response that can help diffuse the situation."
+    thread = "\n".join([comment in comments if "stop-tox" not in comment])  # Combine toxic comments into a single string for simplicity
+    diffuser_prompt = f"With the context of this thread, generate a response that can help diffuse the situation:\n {thread} \n Put your response below."
     # Replace 'model_name' with your actual model name or ID on Replicate
     output = replicate.run(
         "google-deepmind/gemma-7b-it:2790a695e5dcae15506138cc4718d1106d0d475e6dca4b1d43f42414647993d5",
@@ -80,7 +80,12 @@ def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
         }
     )
     #diffuser_text = output[0]["text"]  # Adjust this line based on the model's output
-    return output
+    print("AHHH")
+    outs = []
+    for t in output:
+        print(t)
+        outs.append(t)
+    return outs
 
 def get_thread_text(record):
     root_uri = record["reply"]["root"]["uri"]
@@ -140,9 +145,8 @@ def process_operation(
                     return
                 
                 # Generate a diffuser text based on the thread and toxic comments.
-                # diffuser_text = generate_diffuser_text(post_texts)
-                # else:
-                diffuser_text = "Let's keep our conversations respectful and constructive. Positive communication builds a better community."
+                diffuser_text = generate_diffuser_text(post_texts)
+                # diffuser_text = "Let's keep our conversations respectful and constructive. Positive communication builds a better community."
                 print(diffuser_text)
                 # Get the poster's profile for personalization.
                 poster_profile = client.get_profile(actor=record["author"])
