@@ -8,13 +8,14 @@ from atproto import (
     models,
     parse_subscribe_repos_message,
 )
-from dotenv import load_dotenv
-from openai import OpenAI
+from run_model import run, predictor
+# from dotenv import load_dotenv
+# from openai import OpenAI
 import replicate
 # Functions that generate diffuser prompt 
 # import replicate
 # Load environment variables
-load_dotenv()
+# load_dotenv()
 BLUESKY_USERNAME = "paritoshk.bsky.social"
 BLUESKY_PASSWORD = "Pari2798!"
 # Create a Bluesky client
@@ -22,7 +23,7 @@ client = Client("https://bsky.social")
 firehose = FirehoseSubscribeReposClient()
 
  #can you try?
-#REPLICATE_API_TOKEN = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
+REPLICATE_API_TOKEN = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
 # Example function
 
 # Assuming REPLICATE_API_TOKEN and other necessary imports are defined elsewhere
@@ -78,9 +79,33 @@ def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
             # Add other parameters as required by your model
         }
     )
-    import pdb; pdb.set_trace()
     #diffuser_text = output[0]["text"]  # Adjust this line based on the model's output
     return output
+
+def get_thread_text(record):
+    root_uri = record["reply"]["root"]["uri"]
+    posts = client.get_post_thread(uri=root_uri)
+    posts = posts.model_dump()
+    record_uri = record["uri"]
+
+    def _dfs(tree):
+        text = tree["post"]["record"]["text"]
+        uri = tree["post"]["uri"]
+        if tree["replies"] is None or len(tree["replies"]) == 0:
+            if uri == record_uri:
+                return [text]
+            else:
+                return None
+
+        for reply in tree["replies"]:
+            path = _dfs(reply)
+            if path is not None:
+                return [text] + path
+
+    return _dfs(posts["thread"])
+    
+
+
 
 def process_operation(
     op: models.ComAtprotoSyncSubscribeRepos.RepoOp,
@@ -104,26 +129,31 @@ def process_operation(
             # Check for the intervention trigger in the post's text.
             if "stop-tox" in record["text"] or "@stoptox" in record["text"]:
                 # Compile thread information and detect toxic comments.
-                posts_in_thread = client.get_post_thread(uri=record["uri"])
-                thread_info = str(posts_in_thread)
-                # Adjust the index based on actual data structure
-                toxic_comments = detect_toxic_comments(thread_info)
+                if "reply" not in record:
+                    return
+                # posts_in_thread = client.get_post_thread(uri=record["reply"]["root"]["uri"])
+                post_texts = get_thread_text(record)
+                print(post_texts)
+                predictions, scores = run([post_texts[:-1]], predictor)
+                print(predictions, scores)
+                if predictions.item() == 0:
+                    return
                 
                 # Generate a diffuser text based on the thread and toxic comments.
-                if toxic_comments:
-                    diffuser_text = generate_diffuser_text(thread_info, toxic_comments)
-                else:
-                    diffuser_text = "Let's keep our conversations respectful and constructive. Positive communication builds a better community."
+                # diffuser_text = generate_diffuser_text(post_texts)
+                # else:
+                diffuser_text = "Let's keep our conversations respectful and constructive. Positive communication builds a better community."
                 print(diffuser_text)
                 # Get the poster's profile for personalization.
                 poster_profile = client.get_profile(actor=record["author"])
                 
                 # Send a personalized reply to the post using the generated diffuser text.
-                record_ref = {"uri": record["uri"], "cid": record["cid"]}
-                reply_ref = models.AppBskyFeedPost.ReplyRef(parent=record_ref, root=record_ref)
+                parent_ref = {"uri": record["reply"]["parent"]["uri"], "cid": record["reply"]["parent"]["cid"]}
+                root_ref = {"uri": record["reply"]["root"]["uri"], "cid": record["reply"]["root"]["cid"]}
+                reply_ref = models.AppBskyFeedPost.ReplyRef(parent=parent_ref, root=root_ref)
                 client.send_post(
                     reply_to=reply_ref,
-                    text=f"Hey, {poster_profile.display_name}. {diffuser_text}",
+                    text=f"Hey! {diffuser_text}",
                 )
     elif op.action == "delete":
         # Process delete(s)
