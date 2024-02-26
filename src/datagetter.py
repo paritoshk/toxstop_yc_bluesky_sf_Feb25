@@ -27,65 +27,50 @@ firehose = FirehoseSubscribeReposClient()
 # Example function
 
 # Assuming REPLICATE_API_TOKEN and other necessary imports are defined elsewhere
+from openai import OpenAI
+OPENAI_KEY= "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"
+openaiclient = OpenAI(api_key=OPENAI_KEY)
 
 def detect_toxic_comments(thread_info: str) -> list:
     """
-    Analyze the thread information to detect toxic comments using Replicate.
-
-    :param thread_info: A string containing the compiled content of the thread.
-    :return: A list of strings, each a comment identified as toxic.
+    Analyze the thread information to detect toxic comments using OpenAI.
     """
     detection_prompt = f"Identify any toxic comments from the following thread: {thread_info}"
-    #os.environ['REPLICATE_API_TOKEN'] = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
-    # Replace 'model_name' with your actual model name or ID on Replicate
-    output = replicate.run(
-        "google-deepmind/gemma-7b-it:2790a695e5dcae15506138cc4718d1106d0d475e6dca4b1d43f42414647993d5",
-        input={
-            "prompt": detection_prompt,
-            "top_k": 40,  # Controls diversity. A lower value than 50 to slightly reduce randomness.
-            "top_p": 0.9,  # Nucleus sampling. Lowering a bit from 0.95 to make responses slightly less varied.
-            "temperature": 0.5,  # Lower temperature for more predictable responses.
-            "max_new_tokens": 100,  # Limiting the response length as per your request.
-            "min_new_tokens": 50,  # Ensuring a minimum length to provide enough content for a meaningful response.
-            "repetition_penalty": 1.2  # Slightly higher to discourage repetitive responses.
-            # Add other parameters as required by your model
-        }
+    completion = openaiclient.chat.completions.create(
+        model="gpt-4-0125-preview",  # Adjust the model as necessary
+        messages=[
+            {"role": "system", "content": "You are an AI trained to identify toxic behavior in text."},
+            {"role": "user", "content": detection_prompt}
+        ],
+        temperature=0.15,
+        max_tokens=100,
     )
-    # Example parsing, adjust based on actual output format from your model
-    #toxic_comments = output[0]["text"].split("\n")  # Adjust this line based on the model's output
-    return output
+    
+    # Assuming the model returns a list of toxic comments directly
+    toxic_comments = completion.choices[0].message.content.split("\n")
+    return toxic_comments
 
-def generate_diffuser_text(comments: list) -> str:
+def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
     """
-    Generate a response aimed at diffusing the toxicity identified in the thread using Replicate.
-
-    :param thread_info: A string containing the compiled content of the thread.
-    :param toxic_comments: A list of strings, each a comment identified as toxic.
-    :return: A string containing the AI-generated diffuser text.
+    Generate a response aimed at diffusing the toxicity identified in the thread using OpenAI.
     """
-    thread = "\n".join([comment for comment in comments if "stop-tox" not in comment])  # Combine toxic comments into a single string for simplicity
-    diffuser_prompt = f"With the context of this thread, generate a response that can help diffuse the situation:\n {thread} \n Put your response below."
-    # Replace 'model_name' with your actual model name or ID on Replicate
-    output = replicate.run(
-        "google-deepmind/gemma-7b-it:2790a695e5dcae15506138cc4718d1106d0d475e6dca4b1d43f42414647993d5",
-        input={
-            "prompt": diffuser_prompt,
-            "top_k": 40,  # Controls diversity. A lower value than 50 to slightly reduce randomness.
-            "top_p": 0.9,  # Nucleus sampling. Lowering a bit from 0.95 to make responses slightly less varied.
-            "temperature": 0.5,  # Lower temperature for more predictable responses.
-            "max_new_tokens": 100,  # Limiting the response length as per your request.
-            "min_new_tokens": 50,  # Ensuring a minimum length to provide enough content for a meaningful response.
-            "repetition_penalty": 1.2  # Slightly higher to discourage repetitive responses.
-            # Add other parameters as required by your model
-        }
+    toxic_summary = " ".join(toxic_comments)
+    diffuser_prompt = f"With the context of this thread: {thread_info} and the following toxic comments: {toxic_summary}, generate a response that can help diffuse the situation."
+    
+    completion = openaiclient.chat.completions.create(
+        model="gpt-4-0125-preview",  # Adjust the model as necessary
+        messages=[
+            {"role": "system", "content": "You are an AI trained to promote positive interactions and mitigate toxicity."},
+            {"role": "user", "content": diffuser_prompt}
+        ],
+        temperature=0.15,
+        max_tokens=100,
     )
-    #diffuser_text = output[0]["text"]  # Adjust this line based on the model's output
-    print("AHHH")
-    outs = []
-    for t in output:
-        print(t)
-        outs.append(t)
-    return outs
+    
+    diffuser_text = completion.choices[0].message.content
+    return diffuser_text
+
+
 
 def get_thread_text(record):
     root_uri = record["reply"]["root"]["uri"]
