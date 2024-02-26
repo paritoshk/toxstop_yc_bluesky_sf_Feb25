@@ -28,7 +28,8 @@ firehose = FirehoseSubscribeReposClient()
 
 # Assuming REPLICATE_API_TOKEN and other necessary imports are defined elsewhere
 from openai import OpenAI
-OPENAI_KEY= "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"
+# OPENAI_KEY= "sk-f0uYfeqTyHguaAHJSSy4T3BlbkFJcc7wucomments[:-1p]l6MpzlL7w1alZYG"
+OPENAI_KEY="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"
 openaiclient = OpenAI(api_key=OPENAI_KEY)
 
 def detect_toxic_comments(thread_info: str) -> list:
@@ -43,19 +44,19 @@ def detect_toxic_comments(thread_info: str) -> list:
             {"role": "user", "content": detection_prompt}
         ],
         temperature=0.15,
-        max_tokens=100,
+        max_tokens=80,
     )
     
     # Assuming the model returns a list of toxic comments directly
     toxic_comments = completion.choices[0].message.content.split("\n")
     return toxic_comments
 
-def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
+def generate_diffuser_text(thread_info: str) -> str:
     """
     Generate a response aimed at diffusing the toxicity identified in the thread using OpenAI.
     """
-    toxic_summary = " ".join(toxic_comments)
-    diffuser_prompt = f"With the context of this thread: {thread_info} and the following toxic comments: {toxic_summary}, generate a response that can help diffuse the situation."
+    toxic_summary = " ".join(thread_info)
+    diffuser_prompt = f"With the context of this thread: {thread_info}, generate a short response that can help diffuse the situation."
     
     completion = openaiclient.chat.completions.create(
         model="gpt-4-0125-preview",  # Adjust the model as necessary
@@ -64,7 +65,7 @@ def generate_diffuser_text(thread_info: str, toxic_comments: list) -> str:
             {"role": "user", "content": diffuser_prompt}
         ],
         temperature=0.15,
-        max_tokens=100,
+        max_tokens=80,
     )
     
     diffuser_text = completion.choices[0].message.content
@@ -118,6 +119,7 @@ def process_operation(
         if uri.collection == models.ids.AppBskyFeedPost:
             # Check for the intervention trigger in the post's text.
             if "stop-tox" in record["text"] or "@stoptox" in record["text"]:
+                print("HIII")
                 # Compile thread information and detect toxic comments.
                 if "reply" not in record:
                     return
@@ -142,7 +144,7 @@ def process_operation(
                 reply_ref = models.AppBskyFeedPost.ReplyRef(parent=parent_ref, root=root_ref)
                 client.send_post(
                     reply_to=reply_ref,
-                    text=f"Hey! {diffuser_text}",
+                    text=diffuser_text.strip('"')[:280],
                 )
     elif op.action == "delete":
         # Process delete(s)
