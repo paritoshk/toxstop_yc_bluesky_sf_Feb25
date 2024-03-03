@@ -16,20 +16,20 @@ import replicate
 # import replicate
 # Load environment variables
 # load_dotenv()
-BLUESKY_USERNAME = "paritoshk.bsky.social"
-BLUESKY_PASSWORD = "Pari2798!"
+BLUESKY_USERNAME = "TEST"
+BLUESKY_PASSWORD = "TEST"
 # Create a Bluesky client
 client = Client("https://bsky.social")
 firehose = FirehoseSubscribeReposClient()
 
  #can you try?
-# REPLICATE_API_TOKEN = 'r8_7ICSWEeEQdH6SyLPpcjU1723lKbVExK1kqyIx'
+
 # Example function
 
 # Assuming REPLICATE_API_TOKEN and other necessary imports are defined elsewhere
 from openai import OpenAI
 # OPENAI_KEY= "sk-f0uYfeqTyHguaAHJSSy4T3BlbkFJcc7wucomments[:-1p]l6MpzlL7w1alZYG"
-OPENAI_KEY="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"
+OPENAI_KEY="sk-TEST"
 openaiclient = OpenAI(api_key=OPENAI_KEY)
 
 def detect_toxic_comments(thread_info: str) -> list:
